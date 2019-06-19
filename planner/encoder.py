@@ -329,17 +329,6 @@ class Encoder():
                 atleastone = self.f_mgr.mkAnd(atleastone, actions_or)
         return atleastone
 
-    def encode(self, horizon):
-        """
-        Basic routine for bounded encoding:
-        encodes initial, transition,goal conditions
-        together with frame and exclusiveness/mutexes axioms
-
-        """
-
-
-        pass
-
     def dump(self):
         print('Dumping encoding')
         raise Exception('Not implemented yet')
@@ -348,6 +337,12 @@ class Encoder():
 class EncoderSAT(Encoder):
 
     def encode(self, horizon):
+        """
+        Basic routine for bounded encoding:
+        encodes initial, transition,goal conditions
+        together with frame and exclusiveness/mutexes axioms
+
+        """
         self.horizon = horizon
 
         ## Create variables
@@ -382,3 +377,22 @@ class EncoderSAT(Encoder):
         formula['alo'] = self.encodeAtLeastOne()
 
         return formula
+
+    def convert_CNF(self, formula):
+
+        nnf_conv = NnfConversion(self.f_mgr)
+        cnf_conv = CnfConversion(self.f_mgr)
+
+        formula_collapsed = self.f_mgr.mkAnd(formula['initial'], formula['goal'])
+        formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['actions'])
+        formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['frame'])
+        #formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['sem'])
+        formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['alo'])
+
+        #Convert in NNF
+        formula_nnf = nnf_conv.do_conversion(formula_collapsed)
+
+        #Convert in CNF
+        formula_cnf = cnf_conv.do_conversion(formula_nnf)
+
+        return  formula_cnf

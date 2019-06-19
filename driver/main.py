@@ -70,6 +70,9 @@ def main(BASE_DIR):
 
     formula = e.encode(initial_horizon)
 
+    #formula in CNF
+    formula = e.convert_CNF(formula)
+
     s = search.LinearSearch(e,initial_horizon) #, formula)
     plan = s.do_search()
 

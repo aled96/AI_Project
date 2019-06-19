@@ -226,7 +226,7 @@ class NnfConversion:
             else:
                 left = self.convert(node.left, 1)
                 right = self.convert(node.right, 1)
-                return self.manager.mkImply(left, right)
+                return self.manager.mkImp(left, right)
         else:
             # This cannot happen
             assert True
@@ -249,7 +249,7 @@ class CnfConversion:
         self.clauses.append([node.id])
         if (node.op != None):
             self.convert(node)
-        return
+        return self.clauses
     
     def get_clauses(self):
         return self.clauses
