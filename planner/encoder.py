@@ -122,7 +122,6 @@ class Encoder():
         """
 
         initial = []
-
         init_f = None
 
         for fact in self.task.init:
@@ -131,7 +130,7 @@ class Encoder():
                 if not fact.predicate == '=':
                     if fact in self.boolean_fluents:
                         initial.append(self.boolean_variables.get(0).get(str(fact)+"@0"))
-                        if init_f == None:
+                        if init_f is None:
                             init_f = self.f_mgr.getVarByName(str(fact)+"@0")
                         else:
                             init_f = self.f_mgr.mkAnd(init_f, self.f_mgr.getVarByName(str(fact)+"@0"))
@@ -145,14 +144,13 @@ class Encoder():
         for variable in self.boolean_variables.get(0):
             if not variable in initial:
                 initial.append(-1*self.boolean_variables.get(0).get(variable))
-                if init_f == None:
+                if init_f is None:
                     init_f = self.f_mgr.getVarByName(self.f_mgr.mkNot(variable))
                 else:
                     init_f = self.f_mgr.mkAnd(init_f, self.f_mgr.mkNot(self.f_mgr.getVarByName(variable)))
 
 
-        init_f.do_print()
-        return initial
+        return init_f
 
     def encodeGoalState(self):
         """
@@ -175,12 +173,12 @@ class Encoder():
             ## Check if goal is just a single atom
             if isinstance(goal, pddl.conditions.Atom):
                 if not goal.predicate in axiom_names:
-                    propositional_subgoal.append(self.boolean_variables.get(n).get(str(goal)+"@"+str(n)))
+                    propositional_subgoal.append(str(goal)+"@"+str(n))
 
             ## Check if goal is a conjunction
             elif isinstance(goal, pddl.conditions.Conjunction):
                 for fact in goal.parts:
-                    propositional_subgoal.append(self.boolean_variables.get(n).get(str(goal)+"@"+str(n)))
+                    propositional_subgoal.append(str(goal)+"@"+str(n))
 
             else:
                 raise Exception(
@@ -189,10 +187,17 @@ class Encoder():
             return propositional_subgoal
 
         propositional_subgoal = encodePropositionalGoals()
-        #goal = And(propositional_subgoal) #Transform in AND the list given
+
+        # Transform in AND the list given
+        goal = None
+        for p in propositional_subgoal:
+            if goal is None:
+                goal = self.f_mgr.getVarByName(p)
+            else:
+                goal = self.f_mgr.mkAnd(goal, self.f_mgr.getVarByName(p))
 
         #return goal
-        return propositional_subgoal
+        return goal
 
     def encodeActions(self):
         """
@@ -201,32 +206,48 @@ class Encoder():
         and effects
         """
 
-        actions = []
+        actions = None
 
         for step in range(self.horizon):
             for action in self.actions:
-
-                precondition = []
-                additions = []
-                deletion = []
-
+                p = None
+                a = None
+                d = None
                 ## Encode preconditions
                 for pre in action.condition:
-                    precondition.append(self.boolean_variables.get(step).get(str(pre)+"@"+str(step)))
+                    if(p is None):
+                        p = self.f_mgr.getVarByName(str(pre)+"@"+str(step))
+                    else:
+                        p = self.f_mgr.mkAnd(p, self.f_mgr.getVarByName(str(pre)+"@"+str(step)))
+
+                    if actions is None:
+                        actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p)
+                    else:
+                        actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p))
 
                 ## Encode add effects (conditional supported)
                 for add in action.add_effects:
-                    additions.append(self.boolean_variables.get(step+1).get(str(add)+"@"+str(step+1)))
+                    if(a is None):
+                        a = self.f_mgr.getVarByName(str(add[1])+"@"+str(step+1))
+                    else:
+                        a = self.f_mgr.mkAnd(a, self.f_mgr.getVarByName(str(add[1])+"@"+str(step+1)))
+
+                    if actions is None:
+                        actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), a)
+                    else:
+                        actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), a))
 
                 ## Encode delete effects (conditional supported)
                 for de in action.del_effects:
-                    deletion.append(self.boolean_variables.get(step+1).get(str(de)+"@"+str(step+1)))
-                #TODO-> Here I have the pre, add, del for the action.
-                # to check how to do it
-                # actions.append(Node( Node(ai) -> Add(precondition)))
-                # actions.append(Node( Node(ai) -> Add(additions)))
-                # actions.append(Node( Node(ai) -> Add(deletions)))
+                    if(d is None):
+                        d = self.f_mgr.mkNot(self.f_mgr.getVarByName(str(de[1])+"@"+str(step+1)))
+                    else:
+                        d = self.f_mgr.mkAnd(d, self.f_mgr.mkNot(self.f_mgr.getVarByName(str(de[1])+"@"+str(step+1))))
 
+                    if actions is None:
+                        actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d)
+                    else:
+                        actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d))
         return actions
 
 
@@ -234,29 +255,54 @@ class Encoder():
         """
         Encode explanatory frame axioms
         """
-
-        frame = []
-
+        frame_pl = None
         for step in range(self.horizon):
             ## Encode frame axioms for boolean fluents
             for fluent in self.boolean_fluents:
                 fi = self.boolean_variables.get(step).get(str(fluent) + "@" + str(step))
-                #TODO-> remember the NOT !
                 fi_plus_1 = self.boolean_variables.get(step+1).get(str(fluent) + "@" + str(step+1))
 
-                if fi < 0:
-                    #IMP ( OR(fi NOT (fi+1)) OR(actions s.t. fluent is in Del)
-                    pass
-                else:
-                    #IMP ( OR(NOT fi (fi+1)) OR(actions s.t. fluent is in Add)
-                    pass
+                actions_in_or = None
+                fluents_and = None
+                if fi > 0:
+                    #fi and NOT fi+1
+                    fluents_and = self.f_mgr.mkAnd(self.f_mgr.getVarByName(str(fluent) + "@" + str(step)), self.f_mgr.mkNot(self.f_mgr.getVarByName(str(fluent) + "@" + str(step+1))))
 
-        return frame
+                    for a in self.actions:
+                        for d in a.del_effects:
+                            if d[1] == fluent:
+                                if(actions_in_or is None):
+                                    actions_in_or = self.f_mgr.getVarByName(a.name+"@"+str(step))
+                                else:
+                                    actions_in_or = self.f_mgr.mkOr(actions_in_or, self.f_mgr.getVarByName(a.name+"@"+str(step)))
+                                pass
+                else:
+                    #NOT fi and fi+1
+                    fluents_and = self.f_mgr.mkAnd(self.f_mgr.mkNot(self.f_mgr.getVarByName(str(fluent) + "@" + str(step))), self.f_mgr.getVarByName(str(fluent) + "@" + str(step+1)))
+
+                    for a in self.actions:
+                        for add in a.add_effects:
+                            if add[1] == str(fluent):
+                                if(actions_in_or is None):
+                                    actions_in_or = self.f_mgr.getVarByName(add.name+"@"+str(step))
+                                else:
+                                    actions_in_or = self.f_mgr.mkOr(actions_in_or, self.f_mgr.getVarByName(add.name+"@"+str(step)))
+                                pass
+
+
+                # IMP ( AND(NOT(fi) fi+1), OR(actions s.t. fluent is in Add/Del))
+                if(actions_in_or is not None):
+                    if frame_pl is None:
+                        frame_pl = self.f_mgr.mkImp(fluents_and, actions_in_or)
+                    else:
+                        frame_pl = self.f_mgr.mkAnd(frame_pl, self.f_mgr.mkImp(fluents_and, actions_in_or))
+
+        return frame_pl
 
     def encodeExecutionSemantics(self):
 
         try:
-            return self.modifier.do_encode(self.action_variables, self.horizon)
+            return self.modifier.do_encode(self.action_variables, self.horizon, self.f_mgr)
         except:
             return self.modifier.do_encode(self.action_variables, self.mutexes, self.horizon)
 
@@ -264,13 +310,23 @@ class Encoder():
         """
         For each step (AND) -> OR of every action at step i
         """
-        atleastone = []
+        atleastone = None
         for step in range(self.horizon):
-            actions = []
+
+            actions_or = None
+
+            #OR of all the actions at time i
             for a in self.actions:
-                actions.append(a.name+"@"+str(step))
-            #atleastone.append(Or(actions.append))
-            pass
+                if actions_or is None:
+                    actions_or = self.f_mgr.getVarByName(a.name+"@"+str(step))
+                else:
+                    actions_or = self.f_mgr.mkOr(actions_or, self.f_mgr.getVarByName(a.name+"@"+str(step)))
+
+            #AND of the ORs
+            if atleastone is None:
+                atleastone = actions_or
+            else:
+                atleastone = self.f_mgr.mkAnd(atleastone, actions_or)
         return atleastone
 
     def encode(self, horizon):
@@ -280,7 +336,6 @@ class Encoder():
         together with frame and exclusiveness/mutexes axioms
 
         """
-
 
 
         pass
@@ -323,7 +378,7 @@ class EncoderSAT(Encoder):
         formula['sem'] = self.encodeExecutionSemantics()
 
         ## Encode at least one axioms
-
+        #Already in CNF (ANDs of ORs)
         formula['alo'] = self.encodeAtLeastOne()
 
         return formula

@@ -200,7 +200,7 @@ class NnfConversion:
             temp = self.convert(node.left, -1*polarity) #So the opposite
             self.manager.dispose(node) #I remove the node
             return temp
-                elif (node.op == Operator.AND):
+        elif (node.op == Operator.AND):
             if (polarity < 0):
                 left = self.convert(node.left, -1)
                 right = self.convert(node.right, -1)
@@ -390,3 +390,4 @@ if __name__ == "__main__":
     r.do_print(True)
     print("\n r in CNF:")
     print(cnfize_r.get_clauses())
+    """

@@ -70,7 +70,7 @@ def main(BASE_DIR):
 
     formula = e.encode(initial_horizon)
 
-    s = search.LinearSearch(e,initial_horizon, formula)
+    s = search.LinearSearch(e,initial_horizon) #, formula)
     plan = s.do_search()
 
     ## Validate and print plan
