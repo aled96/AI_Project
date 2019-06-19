@@ -14,7 +14,14 @@ class Plan():
 
         ## extract plan for model
 
-        return plan
+        print("Actions executed:")
+        for step in range(len(encoder.action_variables)):
+            for action in encoder.action_variables[step]:
+                adsa = encoder.action_variables[step].get(action)
+                if encoder.action_variables[step].get(action) in model:
+                    print("Action :"+action)
+
+        return None
 
 
     def validate(self, val, domain, problem):

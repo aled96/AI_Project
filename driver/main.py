@@ -73,7 +73,7 @@ def main(BASE_DIR):
     #formula in CNF
     formula = e.convert_CNF(formula)
 
-    s = search.LinearSearch(e,initial_horizon) #, formula)
+    s = search.LinearSearch(e,initial_horizon, formula)
     plan = s.do_search()
 
     ## Validate and print plan

@@ -68,11 +68,14 @@ class Node:
 class FormulaMgr:
     #We need to check if a formula is already in the formula manager or not, in order to not waste space
     def __init__(self):
-        self.lastId = -1
+        self.lastId = 0
         self.recycleIds = list()        #Some formula can be destroyed in NNF convertion (Recycle Id)
-        self.node2id = dict()       
+        self.node2id = dict()
+        self.node2id[0] = None
         self.id2node = list()
+        self.id2node.append(None)
         self.name2id = dict()
+        self.name2id[0] = None
         
     def getId(self):
         if(len(self.recycleIds) == 0):
@@ -83,7 +86,7 @@ class FormulaMgr:
         else:
             #Recycle existing Id
             return self.recycleIds.pop()
-    
+
     
     # Dispose of a node when its reference count reaches 1
     # or reduce its reference count

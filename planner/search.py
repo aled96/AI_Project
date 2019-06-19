@@ -1,15 +1,17 @@
-from planner import plan
-from planner import encoder
-import utils
 import sys
 sys.path.insert(0, '../')
 from formula import *
-
+sys.path.insert(0, '../DPLL_Solver')
+from formula_DPLL import *
+from heuristics import *
+from dpll import *
+from plan import *
+import utils
 
 class Search():
-    def __init__(self, encoder, initial_horizon):#, formula):
+    def __init__(self, encoder, initial_horizon, formula_cnf):
         self.encoder = encoder
-        #self.formula = formula
+        self.formula_cnf = formula_cnf
         self.horizon = initial_horizon
         self.found = False
 
@@ -25,12 +27,35 @@ class LinearSearch(Search):
         # Override initial horizon
         self.horizon = 1
 
+        #TODO -> increase horizon while you do not obtain the solution (??)
+
         print('Start linear search')
+
+        #Convert to DIMACS (as list)
+        dimacs = list(self.formula_cnf)
+        dimacs.insert(0,"p cnf "+str(self.encoder.f_mgr.lastId)+" "+str(len(self.formula_cnf)))
+
+        #Check if SAT
+        f = Formula(dimacs)
+        h = PureMomsHeuristic(False)
+        s = Solver(f, h)
+        result = s.run()
+        if (result == []):
+            print("\nNo solution has been found\n")
+        else:
+            print("\nThe solution is:\n")
+            print(result)
+
+        plan = Plan(result, self.encoder)
+
         ## Implement linear search here
         ## and return a plan
 
-        while not self.found:
-            pass
+
+
+#        while not self.found:
+
+ #           pass
 
 '''
     def do_search(self):

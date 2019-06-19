@@ -129,7 +129,7 @@ class Encoder():
             if utils.isBoolFluent(fact):
                 if not fact.predicate == '=':
                     if fact in self.boolean_fluents:
-                        initial.append(self.boolean_variables.get(0).get(str(fact)+"@0"))
+                        initial.append(str(fact)+"@0")
                         if init_f is None:
                             init_f = self.f_mgr.getVarByName(str(fact)+"@0")
                         else:
@@ -178,7 +178,7 @@ class Encoder():
             ## Check if goal is a conjunction
             elif isinstance(goal, pddl.conditions.Conjunction):
                 for fact in goal.parts:
-                    propositional_subgoal.append(str(goal)+"@"+str(n))
+                    propositional_subgoal.append(str(fact)+"@"+str(n))
 
             else:
                 raise Exception(
@@ -262,40 +262,44 @@ class Encoder():
                 fi = self.boolean_variables.get(step).get(str(fluent) + "@" + str(step))
                 fi_plus_1 = self.boolean_variables.get(step+1).get(str(fluent) + "@" + str(step+1))
 
+
+                #TODO -> make better
                 actions_in_or = None
                 fluents_and = None
-                if fi > 0:
-                    #fi and NOT fi+1
-                    fluents_and = self.f_mgr.mkAnd(self.f_mgr.getVarByName(str(fluent) + "@" + str(step)), self.f_mgr.mkNot(self.f_mgr.getVarByName(str(fluent) + "@" + str(step+1))))
 
-                    for a in self.actions:
-                        for d in a.del_effects:
-                            if d[1] == fluent:
-                                if(actions_in_or is None):
-                                    actions_in_or = self.f_mgr.getVarByName(a.name+"@"+str(step))
-                                else:
-                                    actions_in_or = self.f_mgr.mkOr(actions_in_or, self.f_mgr.getVarByName(a.name+"@"+str(step)))
-                                pass
-                else:
-                    #NOT fi and fi+1
-                    fluents_and = self.f_mgr.mkAnd(self.f_mgr.mkNot(self.f_mgr.getVarByName(str(fluent) + "@" + str(step))), self.f_mgr.getVarByName(str(fluent) + "@" + str(step+1)))
+                #fi and NOT fi+1
+                fluents_and = self.f_mgr.mkAnd(self.f_mgr.getVarByName(str(fluent) + "@" + str(step)), self.f_mgr.mkNot(self.f_mgr.getVarByName(str(fluent) + "@" + str(step+1))))
 
-                    for a in self.actions:
-                        for add in a.add_effects:
-                            if add[1] == str(fluent):
-                                if(actions_in_or is None):
-                                    actions_in_or = self.f_mgr.getVarByName(add.name+"@"+str(step))
-                                else:
-                                    actions_in_or = self.f_mgr.mkOr(actions_in_or, self.f_mgr.getVarByName(add.name+"@"+str(step)))
-                                pass
-
+                for a in self.actions:
+                    for d in a.del_effects:
+                        if d[1] == fluent:
+                            if(actions_in_or is None):
+                                actions_in_or = self.f_mgr.getVarByName(a.name+"@"+str(step))
+                            else:
+                                actions_in_or = self.f_mgr.mkOr(actions_in_or, self.f_mgr.getVarByName(a.name+"@"+str(step)))
+                            break
 
                 # IMP ( AND(NOT(fi) fi+1), OR(actions s.t. fluent is in Add/Del))
-                if(actions_in_or is not None):
+                if (actions_in_or is not None):
                     if frame_pl is None:
                         frame_pl = self.f_mgr.mkImp(fluents_and, actions_in_or)
                     else:
                         frame_pl = self.f_mgr.mkAnd(frame_pl, self.f_mgr.mkImp(fluents_and, actions_in_or))
+                #NOT fi and fi+1
+                fluents_and = self.f_mgr.mkAnd(self.f_mgr.mkNot(self.f_mgr.getVarByName(str(fluent) + "@" + str(step))), self.f_mgr.getVarByName(str(fluent) + "@" + str(step+1)))
+
+                for a in self.actions:
+                    for add in a.add_effects:
+                        if add[1] == str(fluent):
+                            if(actions_in_or is None):
+                                actions_in_or = self.f_mgr.getVarByName(add.name+"@"+str(step))
+                            else:
+                                actions_in_or = self.f_mgr.mkOr(actions_in_or, self.f_mgr.getVarByName(add.name+"@"+str(step)))
+                            pass
+
+
+                # IMP ( AND(NOT(fi) fi+1), OR(actions s.t. fluent is in Add/Del))
+                frame_pl = self.f_mgr.mkAnd(frame_pl, self.f_mgr.mkImp(fluents_and, actions_in_or))
 
         return frame_pl
 
