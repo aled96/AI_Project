@@ -220,10 +220,10 @@ class Encoder():
                     else:
                         p = self.f_mgr.mkAnd(p, self.f_mgr.getVarByName(str(pre)+"@"+str(step)))
 
-                    if actions is None:
-                        actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p)
-                    else:
-                        actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p))
+                if actions is None:
+                    actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p)
+                else:
+                    actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p))
 
                 ## Encode add effects (conditional supported)
                 for add in action.add_effects:
@@ -232,10 +232,10 @@ class Encoder():
                     else:
                         a = self.f_mgr.mkAnd(a, self.f_mgr.getVarByName(str(add[1])+"@"+str(step+1)))
 
-                    if actions is None:
-                        actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), a)
-                    else:
-                        actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), a))
+                if actions is None:
+                    actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), a)
+                else:
+                    actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), a))
 
                 ## Encode delete effects (conditional supported)
                 for de in action.del_effects:
@@ -244,10 +244,10 @@ class Encoder():
                     else:
                         d = self.f_mgr.mkAnd(d, self.f_mgr.mkNot(self.f_mgr.getVarByName(str(de[1])+"@"+str(step+1))))
 
-                    if actions is None:
-                        actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d)
-                    else:
-                        actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d))
+                if actions is None:
+                    actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d)
+                else:
+                    actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d))
         return actions
 
 
@@ -259,8 +259,8 @@ class Encoder():
         for step in range(self.horizon):
             ## Encode frame axioms for boolean fluents
             for fluent in self.boolean_fluents:
-                fi = self.boolean_variables.get(step).get(str(fluent) + "@" + str(step))
-                fi_plus_1 = self.boolean_variables.get(step+1).get(str(fluent) + "@" + str(step+1))
+                fi = str(fluent) + "@" + str(step)
+                fi_plus_1 = str(fluent) + "@" + str(step+1)
 
 
                 #TODO -> make better
@@ -268,7 +268,7 @@ class Encoder():
                 fluents_and = None
 
                 #fi and NOT fi+1
-                fluents_and = self.f_mgr.mkAnd(self.f_mgr.getVarByName(str(fluent) + "@" + str(step)), self.f_mgr.mkNot(self.f_mgr.getVarByName(str(fluent) + "@" + str(step+1))))
+                fluents_and = self.f_mgr.mkAnd(self.f_mgr.getVarByName(fi), self.f_mgr.mkNot(self.f_mgr.getVarByName(fi_plus_1)))
 
                 for a in self.actions:
                     for d in a.del_effects:
@@ -285,21 +285,28 @@ class Encoder():
                         frame_pl = self.f_mgr.mkImp(fluents_and, actions_in_or)
                     else:
                         frame_pl = self.f_mgr.mkAnd(frame_pl, self.f_mgr.mkImp(fluents_and, actions_in_or))
-                #NOT fi and fi+1
-                fluents_and = self.f_mgr.mkAnd(self.f_mgr.mkNot(self.f_mgr.getVarByName(str(fluent) + "@" + str(step))), self.f_mgr.getVarByName(str(fluent) + "@" + str(step+1)))
 
+
+                #NOT fi and fi+1
+                fluents_and = self.f_mgr.mkAnd(self.f_mgr.mkNot(self.f_mgr.getVarByName(fi)), self.f_mgr.getVarByName(fi_plus_1))
+
+                actions_in_or = None
                 for a in self.actions:
                     for add in a.add_effects:
-                        if add[1] == str(fluent):
+                        if add[1] == fluent:
                             if(actions_in_or is None):
-                                actions_in_or = self.f_mgr.getVarByName(add.name+"@"+str(step))
+                                actions_in_or = self.f_mgr.getVarByName(a.name+"@"+str(step))
                             else:
-                                actions_in_or = self.f_mgr.mkOr(actions_in_or, self.f_mgr.getVarByName(add.name+"@"+str(step)))
+                                actions_in_or = self.f_mgr.mkOr(actions_in_or, self.f_mgr.getVarByName(a.name+"@"+str(step)))
                             pass
 
 
                 # IMP ( AND(NOT(fi) fi+1), OR(actions s.t. fluent is in Add/Del))
-                frame_pl = self.f_mgr.mkAnd(frame_pl, self.f_mgr.mkImp(fluents_and, actions_in_or))
+                if (actions_in_or is not None):
+                    if frame_pl is None:
+                        frame_pl = self.f_mgr.mkImp(fluents_and, actions_in_or)
+                    else:
+                        frame_pl = self.f_mgr.mkAnd(frame_pl, self.f_mgr.mkImp(fluents_and, actions_in_or))
 
         return frame_pl
 
@@ -358,6 +365,7 @@ class EncoderSAT(Encoder):
 
         ## Encode initial state axioms
 
+        #TODO -> remove all print
         formula['initial'] = self.encodeInitialState()
 
         ## Encode goal state axioms
@@ -387,11 +395,14 @@ class EncoderSAT(Encoder):
         nnf_conv = NnfConversion(self.f_mgr)
         cnf_conv = CnfConversion(self.f_mgr)
 
-        formula_collapsed = self.f_mgr.mkAnd(formula['initial'], formula['goal'])
-        formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['actions'])
+        #TODO -> make improvements, we have that Initial, Goal and AtLeastOne -> In CNF
+        formula_collapsed = formula['initial']
+        formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['goal'])
+        formula_collapsed = self.f_mgr.mkAnd(formula['actions'], formula_collapsed)
         formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['frame'])
-        #formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['sem'])
+        formula_collapsed = self.f_mgr.mkAnd(formula['sem'], formula_collapsed)
         formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['alo'])
+        #formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, self.f_mgr.mkNot(self.f_mgr.getVarByName("holding(<a>)@1")))
 
         #Convert in NNF
         formula_nnf = nnf_conv.do_conversion(formula_collapsed)

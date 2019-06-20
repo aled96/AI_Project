@@ -17,10 +17,11 @@ class Plan():
         print("Actions executed:")
         for step in range(len(encoder.action_variables)):
             for action in encoder.action_variables[step]:
-                adsa = encoder.action_variables[step].get(action)
-                if encoder.action_variables[step].get(action) in model:
+                #TODO -> remove this line
+                adsa = encoder.f_mgr.getVarByName(action).id
+                if encoder.f_mgr.getVarByName(action).id in model:
                     print("Action :"+action)
-
+                    
         return None
 
 

@@ -67,13 +67,7 @@ def main(BASE_DIR):
 
     e = encoder.EncoderSAT(task, modifier.LinearModifier())
 
-
-    formula = e.encode(initial_horizon)
-
-    #formula in CNF
-    formula = e.convert_CNF(formula)
-
-    s = search.LinearSearch(e,initial_horizon, formula)
+    s = search.LinearSearch(e,initial_horizon)
     plan = s.do_search()
 
     ## Validate and print plan

@@ -92,11 +92,15 @@ class FormulaMgr:
     # or reduce its reference count
     def dispose(self, node):
         if (node.refcount > 1):
+            node.refcount -= 1
+        else:
             # Reduce the reference count of the children (if any)
             if (node.left != None):
-                node.left.refcount -= 1
+                self.dispose(node.left)
+                #node.left.refcount -= 1
             if (node.right != None):
-                node.right.refcount -= 1
+                self.dispose(node.right)
+                #node.right.refcount -= 1
             # If the node has a label, remove it from the index
             if (node.label != None):
                 self.name2id.pop(node.label)
@@ -105,9 +109,7 @@ class FormulaMgr:
             self.id2node[node.id] = None
             # The id can be recycled 
             self.recycleIds.append(node.id)
-        else:
-            node.refcount -= 1
-            
+
         
     def mkVar(self, name = None):
         #I don't want to duplicate, need to check if exists or not
@@ -175,7 +177,9 @@ class FormulaMgr:
         temp = Node(0, op=Operator.IMP, left = f, right = g)
         return self.mkOp(temp)
         
-        
+    def print_Node(self, node):
+        node.do_print()
+
         
 #Class to handle nnf Conversion
 class NnfConversion:
