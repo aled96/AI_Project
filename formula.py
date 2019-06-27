@@ -9,7 +9,7 @@ class Operator(Enum):
     OR = "OR"
     NOT = "NOT"
     IMP = "IMP"
-    
+
 #Class to represent nodes of propositional formulas as trees
 class Node:
     def __init__(self, nodeid, op = None, left = None, right = None, label = None):
@@ -19,9 +19,9 @@ class Node:
         self.right = right              #Right child (none, for variables)
         self.label = label              #An optional label (ok for encodings)
         self.refcount = 0               #Reference count
-        
+
     #The idea is that we want to map a node into a number.
-    #Problem -> many more objects than numbers -> Hash function might return same numbers for different objects -> collision (handled  
+    #Problem -> many more objects than numbers -> Hash function might return same numbers for different objects -> collision (handled
     #internally).
     def __hash__(self):
         base = 17   #We start with a prime number
@@ -36,7 +36,7 @@ class Node:
             if(self.right != None):
                 base = 31 * base + hash(self.right.id)
         return base
-        
+
     def __eq__(self, other):
         result = (self.__class__ == other.__class__)
         if (self.op == None):
@@ -51,7 +51,7 @@ class Node:
         # Internal function to prinr IDs
         def get_id(i, flag):
             if (flag):
-                return ":" + str(i) 
+                return ":" + str(i)
             else:
                 return ""
         if(self.op == None):
@@ -63,7 +63,7 @@ class Node:
             if(self.right != None):
                 self.right.do_print()
             print(")"),
-    
+
 #Class to handle subformula sharing and formula building
 class FormulaMgr:
     #We need to check if a formula is already in the formula manager or not, in order to not waste space
@@ -76,7 +76,7 @@ class FormulaMgr:
         self.id2node.append(None)
         self.name2id = dict()
         self.name2id[0] = None
-        
+
     def getId(self):
         if(len(self.recycleIds) == 0):
             #Create a new Id
@@ -87,7 +87,7 @@ class FormulaMgr:
             #Recycle existing Id
             return self.recycleIds.pop()
 
-    
+
     # Dispose of a node when its reference count reaches 1
     # or reduce its reference count
     def dispose(self, node):
@@ -102,15 +102,15 @@ class FormulaMgr:
                 self.dispose(node.right)
                 #node.right.refcount -= 1
             # If the node has a label, remove it from the index
-            if (node.label != None):
+            if (node.label is not None):
                 self.name2id.pop(node.label)
             # Remove the node from all other indexes
             self.node2id.pop(node)
             self.id2node[node.id] = None
-            # The id can be recycled 
+            # The id can be recycled
             self.recycleIds.append(node.id)
 
-        
+
     def mkVar(self, name = None):
         #I don't want to duplicate, need to check if exists or not
         if(name != None):
@@ -125,23 +125,23 @@ class FormulaMgr:
         #if name was given:
         if(name != None):
             self.name2id[name] = nodeid
-            
+
         return node
-        
+
     # Get the variable node using the label as a reference
     def getVarByName(self, name):
         if (name != None):
             return self.id2node[self.name2id.get(name)]
         else:
             return None
-    
+
     # Get the variable node using the unique id as a reference
     def getVarById(self, varid):
         if (varid <= self.lastId):
             return self.id2node[varid]
         else:
             return None
-    
+
 
     def mkOp(self, temp):
         #Needs to look in the table and see if such node (temp) exists
@@ -158,35 +158,35 @@ class FormulaMgr:
             self.id2node[nodeid] = temp
             self.node2id[temp] = nodeid
             return temp
-            
-    
+
+
     def mkAnd(self, f, g):
         #Create temp Node and check if it is alreadt saved or not
         temp = Node(0, op=Operator.AND, left = f, right = g)
         return self.mkOp(temp)
-        
+
     def mkOr(self, f, g):
         temp = Node(0, op=Operator.OR, left = f, right = g)
         return self.mkOp(temp)
-        
+
     def mkNot(self, f):
         temp = Node(0, op=Operator.NOT, left = f)
         return self.mkOp(temp)
-        
+
     def mkImp(self, f, g):
         temp = Node(0, op=Operator.IMP, left = f, right = g)
         return self.mkOp(temp)
-        
+
     def print_Node(self, node):
         node.do_print()
 
-        
+
 #Class to handle nnf Conversion
 class NnfConversion:
-    
+
     def __init__(self, mgr):
         self.manager = mgr
-        
+
     def do_conversion(self, node):
         if(node.op != None): #Otherwise no sense
             if(node.op == Operator.NOT):    #If main operator in NOT -> convert into the opposite
@@ -196,7 +196,7 @@ class NnfConversion:
             else:
                 node = self.convert(node,1)
         return node
-                
+
     def convert(self, node, polarity):
         if(node.op == None): #If I am applying to a variable
             if(polarity > 0):
@@ -223,7 +223,7 @@ class NnfConversion:
                 return self.manager.mkAnd(left, right)
             else:
                 left = self.convert(node.left, 1)
-                right = self.convert(node.right, 1)         
+                right = self.convert(node.right, 1)
                 return self.manager.mkOr(left, right)
         elif (node.op == Operator.IMP):
             if (polarity < 0):
@@ -237,45 +237,45 @@ class NnfConversion:
         else:
             # This cannot happen
             assert True
-            
+
 #Class to handle cnf conversion
 #Assume to be converted into NNF first
 class CnfConversion:
-    
+
     def __init__(self, mgr):
         self.clauses = list()
         self.definitions = dict()
         self.manager = mgr
-        
+
     # Assumes that the formula is in negative normal form
     def do_conversion(self, node):
         # Fail if the formula is not in NNF
         assert (node.op != Operator.NOT) or (node.left.op == None)
-    
+
         # Add the unit clause representing the formula itself
         self.clauses.append([node.id])
         if (node.op != None):
             self.convert(node)
         return self.clauses
-    
+
     def get_clauses(self):
         return self.clauses
-    
+
     def convert(self, node):
         # Fail if the formula is not in NNF
         assert (node.op != Operator.NOT) or (node.left.op == None)
-        # Nothing to do if a literal is reached (variable or negation thereof) 
+        # Nothing to do if a literal is reached (variable or negation thereof)
         if (node.op == None) or (node.op == Operator.NOT):
             return
-        # An operator: AND, OR, IMP: add the definitions and propagate 
+        # An operator: AND, OR, IMP: add the definitions and propagate
         # If the subformula was already visited, no need to visit again
         self.add_definitions(node)
         if (self.definitions.get(node.left.id) == None):
             self.convert(node.left)
         if (self.definitions.get(node.right.id) == None):
             self.convert(node.right)
-        
-        
+
+
     def add_definitions(self, node):
         def_clauses = list()
         # Local alias for negation function
@@ -314,10 +314,10 @@ class CnfConversion:
             assert True
         self.definitions[node.id] = def_clauses
         self.clauses.extend(def_clauses)
-        
+
     def neg(self, id):
         return int(id * -1)
-        
+
 """
 if __name__ == "__main__":
     mgr = FormulaMgr()

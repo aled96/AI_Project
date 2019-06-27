@@ -65,6 +65,8 @@ def main(BASE_DIR):
     ## Compose encoder and search
     ## according to user flags
 
+    sys.setrecursionlimit(10000)
+
     e = encoder.EncoderSAT(task, modifier.LinearModifier())
 
     s = search.LinearSearch(e,initial_horizon)

@@ -21,7 +21,7 @@ class Plan():
                 adsa = encoder.f_mgr.getVarByName(action).id
                 if encoder.f_mgr.getVarByName(action).id in model:
                     print("Action :"+action)
-                    
+
         return None
 
 

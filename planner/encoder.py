@@ -223,7 +223,7 @@ class Encoder():
                 if actions is None:
                     actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p)
                 else:
-                    actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p))
+                    actions = self.f_mgr.mkAnd(self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p), actions)
 
                 ## Encode add effects (conditional supported)
                 for add in action.add_effects:
@@ -247,7 +247,7 @@ class Encoder():
                 if actions is None:
                     actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d)
                 else:
-                    actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d))
+                    actions = self.f_mgr.mkAnd(self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d), actions)
         return actions
 
 
@@ -284,7 +284,7 @@ class Encoder():
                     if frame_pl is None:
                         frame_pl = self.f_mgr.mkImp(fluents_and, actions_in_or)
                     else:
-                        frame_pl = self.f_mgr.mkAnd(frame_pl, self.f_mgr.mkImp(fluents_and, actions_in_or))
+                        frame_pl = self.f_mgr.mkAnd(self.f_mgr.mkImp(fluents_and, actions_in_or), frame_pl)
 
 
                 #NOT fi and fi+1
@@ -402,7 +402,6 @@ class EncoderSAT(Encoder):
         formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['frame'])
         formula_collapsed = self.f_mgr.mkAnd(formula['sem'], formula_collapsed)
         formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['alo'])
-        #formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, self.f_mgr.mkNot(self.f_mgr.getVarByName("holding(<a>)@1")))
 
         #Convert in NNF
         formula_nnf = nnf_conv.do_conversion(formula_collapsed)

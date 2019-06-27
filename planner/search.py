@@ -23,19 +23,18 @@ class LinearSearch(Search):
     # None -> failure
     #
     def do_search(self):
-        # Override initial horizon
-        self.horizon = 1
-
         print('Start linear search')
 
+        #self.horizon = 1
         #        while not self.found:
         #TODO -> Do while, increasing horizon
-        for i in range(5):
+        for i in range(20):
 
             formula = self.encoder.encode(self.horizon)
             #formula in CNF
             formula = self.encoder.convert_CNF(formula)
 
+            print("The formula has "+str(self.encoder.f_mgr.lastId)+" variables")
             result = self.dimacs_and_solve(formula)
 
             if (result == []):
