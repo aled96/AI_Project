@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(0, '../')
 from formula import *
+import utils
 
 class Modifier():
     
@@ -31,28 +32,29 @@ class LinearModifier(Modifier):
                         if modifier_at_i is None:
                             modifier_at_i = f_mgr.mkNot(f_mgr.getVarByName(actions_t_i[j]))
                         else:
-                            modifier_at_i = f_mgr.mkAnd(modifier_at_i, f_mgr.mkNot(f_mgr.getVarByName(actions_t_i[j])))
+                            modifier_at_i = utils.add_to_manager(f_mgr, modifier_at_i, f_mgr.mkNot(f_mgr.getVarByName(actions_t_i[j])), 2)
                     else:
                         if modifier_at_i is None:
                             modifier_at_i = f_mgr.getVarByName(actions_t_i[j])
                         else:
-                            modifier_at_i = f_mgr.mkAnd(modifier_at_i, f_mgr.getVarByName(actions_t_i[j]))
+                            modifier_at_i = utils.add_to_manager(f_mgr, modifier_at_i, f_mgr.getVarByName(actions_t_i[j]), 2)
                 if(modifier is None):
                     modifier = modifier_at_i
                 else:
-                    modifier = f_mgr.mkOr(modifier, modifier_at_i)
+                    modifier = utils.add_to_manager(f_mgr, modifier, modifier_at_i, 1)
 
                 count += 1
             if(modifier_final is None):
                 modifier_final = modifier
             else:
-                modifier_final = f_mgr.mkAnd(modifier_final, modifier)
+                modifier_final = utils.add_to_manager(f_mgr, modifier_final, modifier, 2)
 
         return modifier_final
 
 
 
-
-
+class ParallelModifier(Modifier):
+    def do_encode(self, variables, mutexes, bound, f_mgr):
+        pass
 
 

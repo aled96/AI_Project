@@ -133,7 +133,7 @@ class Encoder():
                         if init_f is None:
                             init_f = self.f_mgr.getVarByName(str(fact)+"@0")
                         else:
-                            init_f = self.f_mgr.mkAnd(init_f, self.f_mgr.getVarByName(str(fact)+"@0"))
+                            init_f = utils.add_to_manager(self.f_mgr, init_f, self.f_mgr.getVarByName(str(fact)+"@0"), 2)
 
             else:
                 raise Exception('Initial condition \'{}\': type \'{}\' not recognized'.format(fact, type(fact)))
@@ -147,7 +147,7 @@ class Encoder():
                 if init_f is None:
                     init_f = self.f_mgr.getVarByName(self.f_mgr.mkNot(variable))
                 else:
-                    init_f = self.f_mgr.mkAnd(init_f, self.f_mgr.mkNot(self.f_mgr.getVarByName(variable)))
+                    init_f = utils.add_to_manager(self.f_mgr, init_f, self.f_mgr.mkNot(self.f_mgr.getVarByName(variable)), 2)
 
 
         return init_f
@@ -194,7 +194,7 @@ class Encoder():
             if goal is None:
                 goal = self.f_mgr.getVarByName(p)
             else:
-                goal = self.f_mgr.mkAnd(goal, self.f_mgr.getVarByName(p))
+                goal = utils.add_to_manager(self.f_mgr, goal, self.f_mgr.getVarByName(p), 2)
 
         #return goal
         return goal
@@ -216,38 +216,44 @@ class Encoder():
                 ## Encode preconditions
                 for pre in action.condition:
                     if(p is None):
-                        p = self.f_mgr.getVarByName(str(pre)+"@"+str(step))
+                        if pre.negated:
+                            p = self.f_mgr.mkNot(self.f_mgr.getVarByName(str(pre) + "@" + str(step)))
+                        else:
+                            p = self.f_mgr.getVarByName(str(pre)+"@"+str(step))
                     else:
-                        p = self.f_mgr.mkAnd(p, self.f_mgr.getVarByName(str(pre)+"@"+str(step)))
+                        if pre.negated:
+                            p = utils.add_to_manager(self.f_mgr, p, self.f_mgr.mkNot(self.f_mgr.getVarByName(str(pre) + "@" + str(step))),2)
+                        else:
+                            p = utils.add_to_manager(self.f_mgr, p, self.f_mgr.getVarByName(str(pre)+"@"+str(step)), 2)
 
                 if actions is None:
-                    actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p)
+                    actions = utils.add_to_manager(self.f_mgr, self.f_mgr.getVarByName(action.name + "@" + str(step)), p, 3)
                 else:
-                    actions = self.f_mgr.mkAnd(self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p), actions)
+                    actions = utils.add_to_manager(self.f_mgr, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), p), actions, 2)
 
                 ## Encode add effects (conditional supported)
                 for add in action.add_effects:
                     if(a is None):
                         a = self.f_mgr.getVarByName(str(add[1])+"@"+str(step+1))
                     else:
-                        a = self.f_mgr.mkAnd(a, self.f_mgr.getVarByName(str(add[1])+"@"+str(step+1)))
+                        a = utils.add_to_manager(self.f_mgr, self.f_mgr.getVarByName(str(add[1])+"@"+str(step+1)), a, 2)
 
                 if actions is None:
                     actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), a)
                 else:
-                    actions = self.f_mgr.mkAnd(actions, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), a))
+                    actions = utils.add_to_manager(self.f_mgr, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), a), actions, 2)
 
                 ## Encode delete effects (conditional supported)
                 for de in action.del_effects:
                     if(d is None):
                         d = self.f_mgr.mkNot(self.f_mgr.getVarByName(str(de[1])+"@"+str(step+1)))
                     else:
-                        d = self.f_mgr.mkAnd(d, self.f_mgr.mkNot(self.f_mgr.getVarByName(str(de[1])+"@"+str(step+1))))
+                        d = utils.add_to_manager(self.f_mgr, d, self.f_mgr.mkNot(self.f_mgr.getVarByName(str(de[1])+"@"+str(step+1))), 2)
 
                 if actions is None:
                     actions = self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d)
                 else:
-                    actions = self.f_mgr.mkAnd(self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d), actions)
+                    actions = utils.add_to_manager(self.f_mgr, self.f_mgr.mkImp(self.f_mgr.getVarByName(action.name + "@" + str(step)), d), actions, 2)
         return actions
 
 
@@ -268,7 +274,7 @@ class Encoder():
                 fluents_and = None
 
                 #fi and NOT fi+1
-                fluents_and = self.f_mgr.mkAnd(self.f_mgr.getVarByName(fi), self.f_mgr.mkNot(self.f_mgr.getVarByName(fi_plus_1)))
+                fluents_and = utils.add_to_manager(self.f_mgr, self.f_mgr.getVarByName(fi), self.f_mgr.mkNot(self.f_mgr.getVarByName(fi_plus_1)), 2)
 
                 for a in self.actions:
                     for d in a.del_effects:
@@ -276,7 +282,7 @@ class Encoder():
                             if(actions_in_or is None):
                                 actions_in_or = self.f_mgr.getVarByName(a.name+"@"+str(step))
                             else:
-                                actions_in_or = self.f_mgr.mkOr(actions_in_or, self.f_mgr.getVarByName(a.name+"@"+str(step)))
+                                actions_in_or = utils.add_to_manager(self.f_mgr, actions_in_or, self.f_mgr.getVarByName(a.name+"@"+str(step)), 1)
                             break
 
                 # IMP ( AND(NOT(fi) fi+1), OR(actions s.t. fluent is in Add/Del))
@@ -284,11 +290,11 @@ class Encoder():
                     if frame_pl is None:
                         frame_pl = self.f_mgr.mkImp(fluents_and, actions_in_or)
                     else:
-                        frame_pl = self.f_mgr.mkAnd(self.f_mgr.mkImp(fluents_and, actions_in_or), frame_pl)
+                        frame_pl = utils.add_to_manager(self.f_mgr, self.f_mgr.mkImp(fluents_and, actions_in_or), frame_pl, 2)
 
 
                 #NOT fi and fi+1
-                fluents_and = self.f_mgr.mkAnd(self.f_mgr.mkNot(self.f_mgr.getVarByName(fi)), self.f_mgr.getVarByName(fi_plus_1))
+                fluents_and = utils.add_to_manager(self.f_mgr, self.f_mgr.mkNot(self.f_mgr.getVarByName(fi)), self.f_mgr.getVarByName(fi_plus_1), 2)
 
                 actions_in_or = None
                 for a in self.actions:
@@ -297,7 +303,7 @@ class Encoder():
                             if(actions_in_or is None):
                                 actions_in_or = self.f_mgr.getVarByName(a.name+"@"+str(step))
                             else:
-                                actions_in_or = self.f_mgr.mkOr(actions_in_or, self.f_mgr.getVarByName(a.name+"@"+str(step)))
+                                actions_in_or = utils.add_to_manager(self.f_mgr, actions_in_or, self.f_mgr.getVarByName(a.name+"@"+str(step)), 1)
                             pass
 
 
@@ -306,7 +312,7 @@ class Encoder():
                     if frame_pl is None:
                         frame_pl = self.f_mgr.mkImp(fluents_and, actions_in_or)
                     else:
-                        frame_pl = self.f_mgr.mkAnd(frame_pl, self.f_mgr.mkImp(fluents_and, actions_in_or))
+                        frame_pl = utils.add_to_manager(self.f_mgr, frame_pl, self.f_mgr.mkImp(fluents_and, actions_in_or), 2)
 
         return frame_pl
 
@@ -315,7 +321,7 @@ class Encoder():
         try:
             return self.modifier.do_encode(self.action_variables, self.horizon, self.f_mgr)
         except:
-            return self.modifier.do_encode(self.action_variables, self.mutexes, self.horizon)
+            return self.modifier.do_encode(self.action_variables, self.mutexes, self.horizon, self.f_mgr)
 
     def encodeAtLeastOne(self):
         """
@@ -331,13 +337,13 @@ class Encoder():
                 if actions_or is None:
                     actions_or = self.f_mgr.getVarByName(a.name+"@"+str(step))
                 else:
-                    actions_or = self.f_mgr.mkOr(actions_or, self.f_mgr.getVarByName(a.name+"@"+str(step)))
+                    actions_or = utils.add_to_manager(self.f_mgr, actions_or, self.f_mgr.getVarByName(a.name+"@"+str(step)), 1)
 
             #AND of the ORs
             if atleastone is None:
                 atleastone = actions_or
             else:
-                atleastone = self.f_mgr.mkAnd(atleastone, actions_or)
+                atleastone = utils.add_to_manager(self.f_mgr, atleastone, actions_or, 2)
         return atleastone
 
     def dump(self):
@@ -397,11 +403,11 @@ class EncoderSAT(Encoder):
 
         #TODO -> make improvements, we have that Initial, Goal and AtLeastOne -> In CNF
         formula_collapsed = formula['initial']
-        formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['goal'])
-        formula_collapsed = self.f_mgr.mkAnd(formula['actions'], formula_collapsed)
-        formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['frame'])
-        formula_collapsed = self.f_mgr.mkAnd(formula['sem'], formula_collapsed)
-        formula_collapsed = self.f_mgr.mkAnd(formula_collapsed, formula['alo'])
+        formula_collapsed = utils.add_to_manager(self.f_mgr, formula_collapsed, formula['goal'], 2)
+        formula_collapsed = utils.add_to_manager(self.f_mgr, formula_collapsed, formula['actions'], 2)
+        formula_collapsed = utils.add_to_manager(self.f_mgr, formula_collapsed, formula['frame'], 2)
+        formula_collapsed = utils.add_to_manager(self.f_mgr, formula_collapsed, formula['sem'], 2)
+        formula_collapsed = utils.add_to_manager(self.f_mgr, formula_collapsed, formula['alo'], 2)
 
         #Convert in NNF
         formula_nnf = nnf_conv.do_conversion(formula_collapsed)

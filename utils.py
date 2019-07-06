@@ -1,9 +1,26 @@
 import itertools
 from z3 import *
-#from translate.pddl import *
 from translate import pddl
 from collections import Iterable
+from formula import *
 
+
+
+#In order to make the formula tree more balanced
+left = False
+def add_to_manager(f_mgr, node_l, node_r, op):
+    #op -> 1 OR  2 AND  3 IMP
+    left != left
+    if left:
+        if op == 1:
+            return f_mgr.mkOr(node_l,node_r)
+        elif op == 2:
+            return f_mgr.mkAnd(node_l,node_r)
+    else:
+        if op == 1:
+            return f_mgr.mkOr(node_r,node_l)
+        elif op == 2:
+            return f_mgr.mkAnd(node_r,node_l)
 
 def flatten(items):
     """Yield items from any nested iterable; see Reference."""

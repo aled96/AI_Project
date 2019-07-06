@@ -41,7 +41,8 @@ def main(BASE_DIR):
     print(str(hplan)+"  "+str(domain)+"   "+str(prb))
     
     try:
-        out = subprocess.check_output([hplan, '-o', domain, '-f', prb, '-s', 'gbfs', '-ties', 'smaller_g', '-h', 'haddabs'])
+        #out = subprocess.check_output([hplan, '-o', domain, '-f', prb, '-s', 'gbfs', '-ties', 'smaller_g', '-h', 'haddabs'])
+        out = subprocess.check_output([hplan, '-o', domain, '-f', prb, '-opt'])
 
     except subprocess.CalledProcessError as e:
         sys.exit()
